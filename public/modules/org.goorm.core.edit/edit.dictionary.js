@@ -32,7 +32,7 @@ org.goorm.core.edit.dictionary.prototype = {
 
 		var dict_box_html='';
 		dict_box_html+="<div class='dictionary_box' >";
-		dict_box_html+=		"<div class='top_dictionary_list'  ><table><tr><td style='padding-left : 1px;width: 40px; border-right :black solid 1px;'>Type</td><td style='padding-left:4px'>Name</td></tr></table></div>";
+		dict_box_html+=		"<div class='top_dictionary_list'  ><table><tr style='height:22px;'><td style='padding-left : 1px;width: 40px; border-right :white solid 1.5px;'>Type</td><td style='padding-left:14px;'>Name</td></tr></table></div>";
 		dict_box_html+=		"<div class='dictionary_list'></div>";
 		dict_box_html+=		"<div class='dictionary_desc'></div>";
 		dict_box_html+="</div>";
@@ -171,7 +171,7 @@ org.goorm.core.edit.dictionary.prototype = {
 			var ele_html="";
 			ele_html+="<div class='dictionary_element' id='"+ele_id+"'>";
 			ele_html+=	"<table><tr>";
-			ele_html+=		"<td width='40px' style='font-size:9px' >"+this.type+"</td><td width='90px'>"+print_key+"</td>"
+			ele_html+=		"<td width='40px' style='font-size:14px;font-family: Times New Roman;'height='21px' >"+this.type+"</td><td style='padding-left:16px;font-family: Times New Roman;' width='90px' height='21px'>"+print_key+"</td>"
 			ele_html+=	"</tr></table>"
 			ele_html+="</div>";
 			$(self.target).find(".dictionary_list").append(ele_html);
@@ -180,8 +180,8 @@ org.goorm.core.edit.dictionary.prototype = {
 			var desc_id=ele_id+"_desc";
 			var desc_html="";
 			desc_html+="<div class='dictionary_desc_list' id='"+desc_id+"'>";
-			desc_html+=		"<div style='background:#ccc;font-size:11px;' >Description</div>";
-			desc_html+=		this.description;
+			desc_html+=		"<div style='background-color:black;font-size:14px; color:white; text-align:center;' >Description</div>";
+			desc_html+=			"<div style='margin:2px;'>"+this.description+"</div>";
 			desc_html+="</div>";
 			$(self.target).find(".dictionary_desc").append(desc_html);
 
@@ -245,15 +245,15 @@ org.goorm.core.edit.dictionary.prototype = {
 				this.index--;
 				//$(this.target).find(".dictionary_box").scrollTop($(this.target).find(".dictionary_box").scrollTop() - 5);
 				
-				if (this.index * 20 < scroll_height - 20) {
-					$(this.target).find(".dictionary_list").scrollTop($(this.target).find(".dictionary_list").scrollTop() - 20);
+				if (this.index * 22 < scroll_height - 22) {
+					$(this.target).find(".dictionary_list").scrollTop($(this.target).find(".dictionary_list").scrollTop() - 22);
 				}
 			}
 			else if (this.result.length != 0) {
 				this.index = this.result.length - 1;
 				//$(this.target).find(".dictionary_box").scrollTop(20 * (this.result.length - 1));
 				
-				$(this.target).find(".dictionary_list").scrollTop(this.index * 20);
+				$(this.target).find(".dictionary_list").scrollTop(this.index * 22);
 			}
 		}
 		else if (direction == 1) {
@@ -261,8 +261,8 @@ org.goorm.core.edit.dictionary.prototype = {
 				this.index++;
 				//$(this.target).find(".dictionary_box").scrollTop($(this.target).find(".dictionary_box").scrollTop() + 5);
 				
-				if (this.index * 20 > $(this.target).find(".dictionary_list").height()) {
-					$(this.target).find(".dictionary_list").scrollTop($(this.target).find(".dictionary_list").scrollTop() + 20);
+				if (this.index * 23 > $(this.target).find(".dictionary_list").height()) {
+					$(this.target).find(".dictionary_list").scrollTop($(this.target).find(".dictionary_list").scrollTop() + 22);
 				}
 			}
 			else {
@@ -287,10 +287,10 @@ org.goorm.core.edit.dictionary.prototype = {
 		var cursor_pos = cm.charCoords({line:cursor.line, ch:cursor.ch}, "local");
 		var scroll = cm.getScrollInfo();
 		var gutter = cm.getGutterElement();
-		var gutter_width = $(gutter).outerWidth() + 15;
+		var gutter_width = $(gutter).outerWidth() + 55;
 		
 		var left = cursor_pos.x + gutter_width;
-		var top = cursor_pos.y - scroll.y + 20;
+		var top = cursor_pos.y - scroll.y + 55;
 		
 		var wrapper = $(cm.getWrapperElement());
 		var wrapper_height = wrapper.outerHeight();
@@ -306,7 +306,7 @@ org.goorm.core.edit.dictionary.prototype = {
 		// 딕셔너리박스가 아래라인을 넘어가면 밀림현상 발생.
 		if(workspace.offset().top + workspace.height() -1 < wrapper.offset().top + top + dictionary_box.height()) {
 			if(top < wrapper_height) {
-				top = top - dictionary_box.height() - 18;
+				top = top - dictionary_box.height() - 21;
 			}
 			else {
 				top = wrapper_height - dictionary_box.height();

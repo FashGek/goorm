@@ -28,6 +28,14 @@ org.goorm.core.edit = function () {
 	this.highlight_current_cursor_line = true;
 	this.current_cursor_line = null; // for cursor line
 	
+	//pcs
+	this.str_selection = "";
+	this.char_left = "";	// for Backspace
+	this.char_right = "";	// for Del
+	this.str_line = "";		// for Ctrl+D
+	this.pressed_key = null;
+	//pcs
+
 	this.highlighted_line = null; // for debuging
 	this.preference = null;
 	this.context_menu = null;
@@ -40,6 +48,12 @@ org.goorm.core.edit = function () {
 
 	this.history_ch = null;
 	this.history_line=null;
+
+
+	//auto-complete
+	this.dictionary=null;
+	//object explorer
+
 };
 
 org.goorm.core.edit.prototype = {
@@ -49,11 +63,10 @@ org.goorm.core.edit.prototype = {
 		this.title = title;
 		
 		var dont_update_first = false;
-		
+		self.highlighted_qu = [];
 		var enter_key = false; // onChange can't get enter_key
 		
 		this.collaboration = new org.goorm.core.collaboration.editing();
-		
 		this.preference = core.preference;
 		
 		this.dictionary = new org.goorm.core.edit.dictionary();
@@ -63,8 +76,6 @@ org.goorm.core.edit.prototype = {
 		//$(target).append("<textarea class='clipboardBuffer'></textarea>");
 		
 		this.fold_func = CodeMirror.newFoldFunction(CodeMirror.braceRangeFinder);
-		
-		
 		
 		this.object_tree = new YAHOO.widget.TreeView("object_tree");
 		
@@ -83,7 +94,7 @@ org.goorm.core.edit.prototype = {
 					cm.closeTag(cm, '>');
 				},
 				"'/'": function(cm) {
-					cm.closeTag(cm, '/'); 
+					cm.closCtrleTag(cm, '/'); 
 				},
 				"Ctrl-Space": function(cm) {
 				
@@ -104,16 +115,140 @@ org.goorm.core.edit.prototype = {
 			},
 			onKeyEvent: function(i, e) {
 				/* HISTORY start */
+				if(!e.shiftKey && !e.ctrlKey && !e.metaKey)
+				{
+					$(self.target).off('mousewheel');
+				}
 				if(e.type=="keydown"){
 					var only = !self.editor.somethingSelected();
-					if(e.keyCode==8 && only) self.history.pressed_key = "backspace";
-					else if(e.keyCode==46 && only) self.history.pressed_key = "del";
-					else if(e.keyCode==68 && (e.ctrlKey || e.metaKey) ) self.history.pressed_key = "ctrl+d";
+
+					if(e.keyCode==8 && only) self.pressed_key = "backspace";
+					else if(e.keyCode==46 && only) self.pressed_key = "del";
+					else if(e.keyCode==68 && (e.ctrlKey || e.metaKey) ) self.pressed_key = "ctrl+d";
 					else{
-						self.history.pressed_key = "other";
-						if(only) self.history.str_selection=self.history.char_right;
+						self.pressed_key = "other";
+						if(only) self.str_selection=self.char_right;
+					}
+					
+					/* font size scaling */
+					var resizee = function(target, whichcss, delta){
+						var vv = $(self.target).find(target).css(whichcss).toString();
+						vv = vv.replace('px','');
+						if(delta > 0)vv++;
+						else vv--;
+						$(self.target).find(target).css(whichcss,vv+ 'px'   );
+					};
+
+					var resizee2 = function(target, delta, value)
+					{
+						var vv = $(self.target).find(target).width();
+						if(delta > 0)vv+=value;
+						else vv-=value;
+						$(self.target).find(target).width(vv);
+					} ;
+					
+					// 'ctrl + =' key bind
+					if((e.keyCode == 187 || e.keyCode == 107) && (e.ctrlKey || e.metaKey)) {
+						var fontsize = $(self.target).find('.CodeMirror').css('font-size').toString();
+						fontsize = fontsize.replace('px','');
+
+						var lineheight = $(self.target).find('.CodeMirror').css('line-height').toString();
+						lineheight = lineheight.replace('px','');
+
+						if((fontsize<=11 || fontsize>11) && (lineheight<=15 || lineheight>15)   )
+						{
+							resizee('.CodeMirror', 'font-size', 1);
+							resizee('.CodeMirror', 'line-height', 1);
+							resizee('.CodeMirror-gutter-text', 'font-size', 1);
+							resizee('.CodeMirror-gutter-text', 'line-height', 1);
+
+
+							resizee2('.CodeMirror-gutter-text', 1, 1);
+							resizee2('.CodeMirror-gutter', 1, 2);
+
+							self.editor.refresh();
+						}
+					}
+					else if((e.keyCode == 189 || e.keyCode == 109) && (e.ctrlKey || e.metaKey)) {
+						var fontsize = $(self.target).find('.CodeMirror').css('font-size').toString();
+						fontsize = fontsize.replace('px','');
+
+						var lineheight = $(self.target).find('.CodeMirror').css('line-height').toString();
+						lineheight = lineheight.replace('px','');
+
+						if(fontsize>11 && lineheight>15   )
+						{
+							resizee('.CodeMirror', 'font-size', -1);
+							resizee('.CodeMirror', 'line-height', -1);
+							resizee('.CodeMirror-gutter-text', 'font-size', -1);
+							resizee('.CodeMirror-gutter-text', 'line-height', -1);
+
+
+							resizee2('.CodeMirror-gutter-text', -1, 1);
+							resizee2('.CodeMirror-gutter', -1, 2);
+
+							self.editor.refresh();
+						}
 					}
 				}
+				
+				
+				// font size scaling
+				if(e.shiftKey || e.ctrlkey || e.metaKey) {
+					$(self.target).off('mousewheel');	
+					$(self.target).on('mousewheel',function(event, delta){
+						var resizee = function(target, whichcss, delta){
+							var vv = $(self.target).find(target).css(whichcss).toString();
+							vv = vv.replace('px','');
+							if(delta > 0)vv++;
+							else vv--;
+							$(self.target).find(target).css(whichcss,vv+ 'px'   );
+							return vv;
+						};
+	
+						var resizee2 = function(target, delta, value)
+						{
+							var vv = $(self.target).find(target).width();
+							if(delta > 0)vv+=value;
+							else vv-=value;
+							$(self.target).find(target).width(vv);
+						} ;
+						
+						var fontsize = $(self.target).find('.CodeMirror').css('font-size').toString();
+						fontsize = fontsize.replace('px','');
+	
+						var lineheight = $(self.target).find('.CodeMirror').css('line-height').toString();
+						lineheight = lineheight.replace('px','');
+	
+						if(((fontsize<=11 && delta > 0 ) || fontsize>11) && ((lineheight<=15 && delta > 0 ) || lineheight>15)   )
+						{
+							var nowfont;
+							nowfont = resizee('.CodeMirror', 'font-size', delta);
+							resizee('.CodeMirror', 'line-height', delta);
+							resizee('.CodeMirror-gutter-text', 'font-size', delta);
+							resizee('.CodeMirror-gutter-text', 'line-height', delta);
+	
+	
+							resizee2('.CodeMirror-gutter-text', delta, 1);
+							resizee2('.CodeMirror-gutter', delta, 2);
+							
+							var zoompercent = $(self.target).parent().parent().find('.zoom_percent').text()
+							zoompercent.replace('%','')
+
+							var percent = (nowfont * 100 / 11).toFixed(1);
+
+							$(self.target).parent().parent().find('.zoom_percent').text(percent+'%')
+							
+							self.editor.refresh();
+						}
+						
+						e.stopPropagation();
+						e.preventDefault();
+						return false;
+					});
+				}
+				
+
 				/* HISTORY end */
 				
 				if ($(self.target).find(".dictionary_box").css("display") == "block" && e.type == "keyup" && e.keyCode != 8 && e.keyCode != 32) {
@@ -167,55 +302,32 @@ org.goorm.core.edit.prototype = {
 				
 			},
 			onChange: function(i, e, a){	// i = CodeMirror object, e = change informations
-				if(self.history.mode == "history") return;
+				//if(self.history.mode == "history") return;
 				if(dont_update_first){
 					if(self.collaboration.updating_process_running == false){
 						var ev = e;
 						if(ev.from.ch!=ev.to.ch || ev.from.line != ev.to.line){
-							if(self.history.pressed_key == "backspace"){
-								ev.before = self.history.char_left;
-							}else if(self.history.pressed_key == "del"){
-								ev.before = self.history.char_right;
-							}else if(self.history.pressed_key == "ctrl+d"){
-								ev.before = self.history.str_line;
+							if(self.pressed_key == "backspace"){
+								ev.before = self.char_left;
+							}else if(self.pressed_key == "del"){
+								ev.before = self.char_right;
+							}else if(self.pressed_key == "ctrl+d"){
+								ev.before = self.str_line;
 							}else{
-								ev.before = self.history.str_selection;
+								ev.before = self.str_selection;
 							}
 						}
-						self.history.update_selection();
+
+						//pcs
+						//self.history.update_selection();
+						var cur = self.editor.getCursor();
+						if(self.editor.somethingSelected()) self.str_selection = self.editor.getSelection();
+						self.str_line = self.editor.getLine(cur.line);
+						self.char_left = self.editor.getRange({line:cur.line, ch:cur.ch-1}, cur);
+						self.char_right = self.editor.getRange(cur, {line:cur.line, ch:cur.ch+1});
+						//pcs
 						self.monitoring_lines(e);
 						self.collaboration.update_change(ev);
-						
-						// if(enter_key == true) {
-							// var line = self.editor.getLine(ev.to.line);
-
-							// ev.text[0]="\n";
-							// ev.from.line = self.fromCh.line;
-							// ev.to.line = self.toCh.line;
-							// ev.from.ch = self.fromCh.ch;
-							// ev.to.ch = self.toCh.ch;
-							// self.collaboration.update_change(ev);
-							// ev.text[0]=line;
-							// ev.from.line = ev.to.line+1;
-							// ev.to.line = ev.to.line+1;
-							// if(self.fromCh.line != self.toCh.line){
-								// ev.from.line = self.editor.getCursor().line;
-								// ev.to.line = self.editor.getCursor().line;
-							// }
-							// ev.to.ch = 99999;
-							// ev.from.ch = 0;
-							
-							// var indent = self.editor.getCursor().ch;
-							// for(var i=0; i < indent; i++){
-								// ev.text[0]+=" ";
-							// }
-							
-							// enter_key = false;
-						// }
-						// else {
-							// self.collaboration.update_change(ev);
-						// }
-						//self.editor.getCursor();
 					}
 				}
 				else{
@@ -232,11 +344,15 @@ org.goorm.core.edit.prototype = {
 				if(!(self.editor.getCursor().line==self.history_line && self.editor.getCursor().ch==self.history_ch+1)){
 					$('.dictionary_box').hide();
 				}
+				//highlight part
+				//if(self.history_line&&self.history_ch)
+					//self.editor.markText({line: self.history_line,ch: self.history_ch},{line: self.editor.getCursor().line,ch: self.editor.getCursor().ch},"highlight_line");
 				self.history_ch=self.editor.getCursor().ch;
 				self.history_line=self.editor.getCursor().line;
 				//by sim
 
 				if (self.highlight_current_cursor_line) {
+					
 					self.editor.setLineClass(self.current_cursor_line, null, null);
 					self.current_cursor_line =	self.editor.setLineClass(self.editor.getCursor().line, "current_line", "activeline");
 				}
@@ -253,20 +369,29 @@ org.goorm.core.edit.prototype = {
 				});
 				
 				self.editor.matchHighlight("CodeMirror-matchhighlight");
-				self.history.update_selection();	// for HISTORY...
-				
+					// for HISTORY...
+				//pcs history delete
+				//self.history.update_selection();
+				var cur = self.editor.getCursor();
+				if(self.editor.somethingSelected()) self.str_selection = self.editor.getSelection();
+				self.str_line = self.editor.getLine(cur.line);
+				self.char_left = self.editor.getRange({line:cur.line, ch:cur.ch-1}, cur);
+				self.char_right = self.editor.getRange(cur, {line:cur.line, ch:cur.ch+1});
+
+				//pcs
 				var window_manager = core.module.layout.workspace.window_manager;
-				window_manager.window[window_manager.active_window].activate();
+				var wnd = window_manager.window[window_manager.active_window];
+				if(wnd!=undefined) wnd.activate();
 			},
 			onFocus: function () {
 				core.status.focus_on_editor = true;
-				
 				if (self.filetype == "js") {
 					//self.analyze();
 				}
 				else {
-					delete self.object_tree;
-					$("#object_tree").empty();
+					//by sim 
+					//delete self.object_tree;
+					//$("#object_tree").empty();
 				}
 				
 				var window_manager = core.module.layout.workspace.window_manager;
@@ -275,28 +400,34 @@ org.goorm.core.edit.prototype = {
 			onBlur: function () {
 				core.status.focus_on_editor = false;
 			},
-			onGutterClick: function(cm, n) {
+			onGutterClick: function(cm, n, ev) {
 				var info = cm.lineInfo(n);
-				
-				if ($(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find(".breakpoint").length > 0) {
-					$(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find(".breakpoint").remove();
-					
-					self.breakpoints = self.breakpoints.unique();
-					var index = self.breakpoints.inArray(n);
-					self.breakpoints.remove(index, index);
+				var target = document.elementFromPoint(ev.x, ev.y);
+				if(target.className != 'folding_icon' && target.className != 'folding_icon_minus'){
+					if ($(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find(".breakpoint").length > 0) {
+						$(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find(".breakpoint").remove();
+						
+						self.breakpoints = self.breakpoints.unique();
+						var index = self.breakpoints.inArray(n);
+						self.breakpoints.remove(index, index);
+					}
+					//else if($(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find('.folding_icon_minus').length == 0){
+					else{
+						$(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").prepend("<span class='breakpoint'>●</span>");
+						
+						self.breakpoints = self.breakpoints.unique();
+						self.breakpoints.push(n);
+					}
+				}else{
+					self.fold_func(cm, n);	
 				}
-				else if($(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").find('.folding_icon_minus').length == 0){
-					$(self.target).find(".CodeMirror-gutter-text pre:eq(" + n + ")").prepend("<span class='breakpoint'>●</span>");
-					
-					self.breakpoints = self.breakpoints.unique();
-					self.breakpoints.push(n);
-				}
 				
-				self.fold_func(cm, n);
 				self.set_foldable();
 				
 				var window_manager = core.module.layout.workspace.window_manager;
 				window_manager.window[window_manager.active_window].activate();
+
+
 			},
 			onUpdate: function () {
 				self.set_foldable();
@@ -304,6 +435,9 @@ org.goorm.core.edit.prototype = {
 				self.highlight_line(self.highlighted_line);
 			}
 		});
+		/*$('div .folding_icon_minus').on('click',function(){
+
+		});*/
 
 		///////////////////////////////////////////////////
 		//for assistant authentic, also filepath 
@@ -333,9 +467,9 @@ org.goorm.core.edit.prototype = {
 		this.collaboration.set_editor(this.editor);
 		
 		this.set_option();
-		
-		this.history = core.module.layout.history;
-		
+		//pcs
+		//this.history = core.module.layout.history;
+		//pcs
 		//this.mode = "htmlmixed";
 		//this.editor.set_option("mode", this.mode);
 
@@ -368,31 +502,11 @@ org.goorm.core.edit.prototype = {
 		this.context_menu = new org.goorm.core.menu.context();
 		this.context_menu.init("configs/menu/org.goorm.core.edit/edit.context.html", "edit.context", this.target, this.timestamp, null, function () {
 			core.module.action.init();
-
-			var language = "";
-			if(localStorage.getItem("language")==null) {
-				if (core.server_language=="client") {
-					if(navigator.language=="ko") {
-						language = "kor";
-					}
-					else {
-						language = "us";
-					}
-				}
-				else {
-					language = core.server_language;
-				}
-				
-				core.module.localization.change_language(language);
-			}
-			else {
-				core.module.localization.change_language(localStorage.getItem("language"));
-			}
-			
+			core.module.localization.change_language(localStorage.getItem("language"), true);		
 			core.module.clipboard.init_context(self.context_menu);
 		});
 		
-//		$(this.target).find(".CodeMirror-lines div:first").append("<div class='highlight_line'></div>");
+			//		$(this.target).find(".CodeMirror-lines div:first").append("<div class='highlight_line'></div>");
 	},
 	
 	highlight_line: function (line) {
@@ -405,15 +519,15 @@ org.goorm.core.edit.prototype = {
 			this.highlighted_line = line;
 			//$(this.target).find(".CodeMirror-lines div:last").find("pre:eq(" + (line-1) + ")").addClass("highlight_line");
 		}
-//		$(this.target).find('.highlight_line').css("top", cursor_pos.y);
-//		$(this.target).find('.highlight_line').css("height", height);
-//		$(this.target).find('.highlight_line').show();
-//		
-		
-/*
-		$(this.target).find(".CodeMirror-lines div:first div:last pre").removeClass("highlight");
-		$(this.target).find(".CodeMirror-lines div:first div:last pre:nth-child(" + line + ")").addClass("highlight");
-*/
+		//		$(this.target).find('.highlight_line').css("top", cursor_pos.y);
+		//		$(this.target).find('.highlight_line').css("height", height);
+		//		$(this.target).find('.highlight_line').show();
+		//		
+				
+		/*
+				$(this.target).find(".CodeMirror-lines div:first div:last pre").removeClass("highlight");
+				$(this.target).find(".CodeMirror-lines div:first div:last pre:nth-child(" + line + ")").addClass("highlight");
+		*/
 	},
 	
 	clear_highlight: function () {
@@ -424,7 +538,7 @@ org.goorm.core.edit.prototype = {
 			this.editor.setLineClass(line, null, null);
 			
 		}
-//		$(this.target).find(".CodeMirror-lines .highlight_line").removeClass("highlight_line");
+		//		$(this.target).find(".CodeMirror-lines .highlight_line").removeClass("highlight_line");
 	},
 	
 	set_foldable: function () {
@@ -439,6 +553,10 @@ org.goorm.core.edit.prototype = {
 			$(this.target).find(".CodeMirror-gutter-text").find("pre").each(function (i) {
 				if (self.editor.getLine(i).indexOf("{") > -1) {
 					$(this).prepend("<div class='folding_icon_minus'></div>");
+					var width = $(self.target).find('.CodeMirror-gutter').width();
+
+					$(self.target).find('.folding_icon_minus').css('left', width+5);
+					$(self.target).find('.folding_icon').css('left', width+5);
 				}
 				
 
@@ -617,14 +735,14 @@ org.goorm.core.edit.prototype = {
 		if (!this.highlight_current_cursor_line) {
 			this.editor.setLineClass(this.current_cursor_line, null, null);
 		}
-//		deprecated tabMode
-//		if (this.tab_mode != undefined) {
-//			this.editor.setOption("tabMode", this.tab_mode);		
-//		}
-//		deprecated enterMode
-//		if (this.enter_mode != undefined) {
-//			this.editor.setOption("enterMode", this.enter_mode);
-//		}
+		//		deprecated tabMode
+		//		if (this.tab_mode != undefined) {
+		//			this.editor.setOption("tabMode", this.tab_mode);		
+		//		}
+		//		deprecated enterMode
+		//		if (this.enter_mode != undefined) {
+		//			this.editor.setOption("enterMode", this.enter_mode);
+		//		}
 		if (this.show_line_numbers != undefined) {
 			this.editor.setOption("lineNumbers", this.show_line_numbers);
 		}
@@ -682,12 +800,11 @@ org.goorm.core.edit.prototype = {
 		};
 		
 		$.get(url, postdata, function (data) {
-			
 			if(data) self.editor.setValue(data);
 			else self.editor.setValue("");
-			
-			self.history.latest_version = data;
-		
+			//pcs
+			//self.history.latest_version = data;
+			//pcs
 			//self.collaboration.init(self.target,self);
 			
 			/*
@@ -791,6 +908,37 @@ org.goorm.core.edit.prototype = {
 				}
 			}
 		});
+
+		////object explorer tab refresh when save file
+		$.get("edit/get_object_explorer"
+			,{
+				selected_file_path :  core.module.layout.workspace.window_manager.active_filename
+			}
+			,function(data){
+			//	console.log('after save----got_object_explorer');
+			//	console.log(data);
+				core.module.layout.object_explorer.refresh('object_tree',data);
+
+			}
+		);
+		/*
+		$.get("function/get_function_explorer"
+			,{
+				selected_project_path : core.status.current_project_path,
+				selected_project_type : core.status.current_project_type
+			},
+			function(data){
+				console.log(data);
+
+				
+				core.status.sim=data;
+				
+			}
+		);*/
+		////function explorer by sim
+
+
+		
 
 	},
 
@@ -1025,15 +1173,55 @@ org.goorm.core.edit.prototype = {
 	on_activated : function(){
 		var self = this;
 		//check duplication of activation, invalid activation, etc.
-		if(this.history.wait_for_loading == true) return;
-		if((this.filepath + this.filename) == this.history.last_init_load) this.history.activated = true;
-		if(this.history.activated == false) return;
-		if(this.history.filename == "/" + this.filepath + this.filename) return;
+		//if(this.history.wait_for_loading == true) return;
+		//if((this.filepath + this.filename) == this.history.last_init_load) this.history.activated = true;
+		//if(this.history.activated == false) return;
+		//if(this.history.filename == "/" + this.filepath + this.filename) return;
 
 		// valid activation! manipulation start!
-		this.history.deactivated();
-		this.history.init_history(this)
-		this.editor.setOption("readOnly",false);
-		$(self.window_manager).trigger('window_open',{"filepath": this.filepath,"filename":this.filename});
-	}
+		//this.history.deactivated();
+		//this.history.init_history(this)
+		//this.editor.setOption("readOnly",false);
+		//$(self.window_manager).trigger('window_open',{"filepath": this.filepath,"filename":this.filename});
+		////start object explorer tab refresh when open file
+	//	console.log('real',self.filepath+self.filename);
+	//	console.log('activate!!!!!!!',jQuery.extend(true,{}, core.module.layout.workspace.window_manager.active_filename) );
+
+		$.get("edit/get_object_explorer",{
+				selected_file_path :  self.filepath+self.filename
+			},function(data){
+				core.module.layout.object_explorer.refresh('object_tree',data);
+			}
+		);
+
+		var window_manager = core.module.layout.workspace.window_manager;
+
+		$(window_manager).trigger('window_open',{"filepath": this.filepath,"filename":this.filename});
+		$(window_manager).trigger('editor_is_on_activated', self);
+	},
+	// highlight_setting: function(){
+	// 	var self = this;
+	// 	self.highlighted_qu = [];
+		
+	// 	var ret;
+	// 	$('#workspace .yui-panel-container').unbind('mouseup');
+	// 	$('#workspace .yui-panel-container').mouseup(function(){
+	// 		ret = self.editor.markText({line: self.editor.getCursor("start").line, ch: self.editor.getCursor("start").ch},{line: self.editor.getCursor("end").line,ch: self.editor.getCursor("end").ch},"highlight_line");
+	// 		self.highlighted_qu.push(ret);
+	// 	});
+	// 	//[self.window_manager.active_window]
+	// 	this.editor.setOption('readOnly','nocursor');
+	// },
+	// remove_highlight_setting: function(){
+	// 	var self = this;
+	// 	$('#workspace .yui-panel-container').unbind('mouseup');
+	// 	this.editor.setOption('readOnly',false);
+	// 	$(self.window_manager).trigger('window_open',{"filepath": this.filepath,"filename":this.filename});
+	// 	if(self.highlighted_qu.length>0)
+	// 	$.each( self.highlighted_qu, function(i,textMark){
+	// 		if(textMark)
+	// 			textMark.clear();
+	// 		delete self.highlighted_qu[i];
+	// 	});
+	// }
 };
