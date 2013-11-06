@@ -40,9 +40,9 @@ Getting Started
 
   install node.js :
 
-          $ wget http://nodejs.org/dist/v0.10.20/node-v0.10.20.tar.gz
-          $ tar -xvzf node-v0.10.20.tar.gz
-          $ cd node-v0.10.20
+          $ wget http://nodejs.org/dist/v0.10.21/node-v0.10.21.tar.gz
+          $ tar -xvzf node-v0.10.21.tar.gz
+          $ cd node-v0.10.21
           $ ./configure
           $ make
           $ sudo make install
@@ -53,7 +53,7 @@ Getting Started
           
   if node.js installed successfully, it prints node.js version as below:
   
-          $ v0.10.20
+          $ v0.10.21
 
   install npm (optional- latest version of node.js automatically install npm, so you may not install npm) :
   
@@ -119,6 +119,9 @@ Getting Started
           $ node goorm.js set -x plugin_exclude_list
           $ goorm set --plugin_exclude_list [plugin_exclude_list]
 
+          $ node goorm.js set -u [user_id]
+          $ goorm set --user [user_id]
+
   stop goorm daemon : 
 
           $ node goorm.js stop
@@ -148,4 +151,4 @@ Getting Started
 License
 -------
 
-goorm is provided under the [GNU AFFERO General Public License Version 3.0(AGPLv3)](http://opensource.org/licenses/agpl-v3.html)
+goormIDE fundamentally has a dual license. Currently being released as open source version is the AGPL v3 conforms to the open source project. Modifying the source code must be disclosed the source code using the same license. If you want to use goorm IDE commercially, you must purchase the license.(contact@goorm.io)
