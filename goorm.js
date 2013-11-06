@@ -180,6 +180,7 @@ fs.readFile(__dirname+"/info_goorm.json", "utf8", function(err, contents) {
 
 							var readline = require('readline');
 							var crypto = require('crypto');
+							var old_write = process.stdout.write;
 
 							var rl = readline.createInterface({
 								input: process.stdin,
@@ -187,24 +188,42 @@ fs.readFile(__dirname+"/info_goorm.json", "utf8", function(err, contents) {
 							});
 
 							console.log('Please initialize your ID & PW ...'.yellow);
-							rl.question("Your ID : ", function(user_id) {
-							rl.question("Your PW : ", function(user_pw) {
-								var sha_pw = crypto.createHash('sha1');
-								sha_pw.update(user_pw);
-								user_pw = sha_pw.digest('hex');
+							rl.question("id : ", function(user_id) {
+								process.stdout.write('password : ')
+								process.stdout.write = function () {};
 
-								var user = {
-									'id' : user_id,
-									'pw' : user_pw
-								}
+								rl.question("password : ", function(user_pw) {
+									process.stdout.write = old_write;
+									process.stdout.write('\nconfirm password : ')
+									process.stdout.write = function () {};
 
-								config_data.users.push(user);
-								fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+									rl.question("confirm password : ", function(confirm_pw) {
+										process.stdout.write = old_write;
 
-								rl.close();
+										if (user_pw != confirm_pw) {
+											console.log('\nPlease recheck your password. They are not a match.');
+											process.exit();
+										}
+										else {
+											console.log();
+										}
 
-								start();
-							});
+										var sha_pw = crypto.createHash('sha1');
+										sha_pw.update(user_pw);
+										user_pw = sha_pw.digest('hex');
+
+										var user = {
+											'id' : user_id,
+											'pw' : user_pw
+										}
+
+										config_data.users.push(user);
+										fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+
+										rl.close();
+										start();
+									})
+								});
 							});
 						}
 						else {
@@ -318,6 +337,7 @@ fs.readFile(__dirname+"/info_goorm.json", "utf8", function(err, contents) {
 
 									var readline = require('readline');
 									var crypto = require('crypto');
+									var old_write = process.stdout.write;
 
 									var rl = readline.createInterface({
 										input: process.stdin,
@@ -325,24 +345,42 @@ fs.readFile(__dirname+"/info_goorm.json", "utf8", function(err, contents) {
 									});
 
 									console.log('Please initialize your ID & PW ...'.yellow);
-									rl.question("Your ID : ", function(user_id) {
-									rl.question("Your PW : ", function(user_pw) {
-										var sha_pw = crypto.createHash('sha1');
-										sha_pw.update(user_pw);
-										user_pw = sha_pw.digest('hex');
+									rl.question("id : ", function(user_id) {
+										process.stdout.write('password : ')
+										process.stdout.write = function () {};
 
-										var user = {
-											'id' : user_id,
-											'pw' : user_pw
-										}
+										rl.question("password : ", function(user_pw) {
+											process.stdout.write = old_write;
+											process.stdout.write('\nconfirm password : ')
+											process.stdout.write = function () {};
 
-										config_data.users.push(user);
-										fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+											rl.question("confirm password : ", function(confirm_pw) {
+												process.stdout.write = old_write;
 
-										rl.close();
+												if (user_pw != confirm_pw) {
+													console.log('\nPlease recheck your password. They are not a match.');
+													process.exit();
+												}
+												else {
+													console.log();
+												}
 
-										start();
-									});
+												var sha_pw = crypto.createHash('sha1');
+												sha_pw.update(user_pw);
+												user_pw = sha_pw.digest('hex');
+
+												var user = {
+													'id' : user_id,
+													'pw' : user_pw
+												}
+
+												config_data.users.push(user);
+												fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+
+												rl.close();
+												start();
+											})
+										});
 									});
 								}
 								else {
@@ -470,17 +508,83 @@ fs.readFile(__dirname+"/info_goorm.json", "utf8", function(err, contents) {
 					if(temp_dir && temp_dir[temp_dir.length - 1] != '/') temp_dir = temp_dir + '/';
 
 					
-					var config_data = {
-						workspace: workspace,
-						temp_dir: temp_dir,
-						plugin_exclude_list : plugin_exclude_list
-					};
+					if(options['user']) {
+						if (options['user'] === true) {
+							console.log('Please input your id'.red);
+							console.log('node goorm set (-u/--user) [user_id]');
+							console.log('or');
+							console.log('goorm set (-u/--user) [user_id]');
+							process.exit();
+						}
+
+						var user_id = options['user'];
+
+						var readline = require('readline');
+						var crypto = require('crypto');
+						var old_write = process.stdout.write;
+
+						var rl = readline.createInterface({
+							input: process.stdin,
+							output: process.stdout
+						});
+
+						process.stdout.write('password : ')
+						process.stdout.write = function () {};
+
+						rl.question("password : ", function(user_pw) {
+							process.stdout.write = old_write;
+							process.stdout.write('\nconfirm password : ')
+							process.stdout.write = function () {};
+
+							rl.question("confirm password : ", function(confirm_pw) {
+								process.stdout.write = old_write;
+
+								if (user_pw != confirm_pw) {
+									console.log('\nPlease recheck your password. They are not a match.');
+									process.exit();
+								}
+								else {
+									console.log();
+								}
+
+								var sha_pw = crypto.createHash('sha1');
+								sha_pw.update(user_pw);
+								user_pw = sha_pw.digest('hex');
+
+								var user = {
+									'id' : user_id,
+									'pw' : user_pw
+								}
+
+								rl.close();
+
+								var config_data = {
+									workspace: workspace,
+									temp_dir: temp_dir,
+									plugin_exclude_list : plugin_exclude_list,
+									users: [user]
+								};
+								
+						
+								fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+								console.log("goormIDE: your configs are successfully added!");
+							});
+						});
+					}
+					else {
+						var config_data = {
+							workspace: workspace,
+							temp_dir: temp_dir,
+							plugin_exclude_list : plugin_exclude_list,
+							users: users
+						};
+
+						fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
+						console.log("goormIDE: your configs are successfully added!");
+					}
 					
 					
 					
-			
-					fs.writeFileSync(process.env.HOME +  '/.goorm/config.json', JSON.stringify(config_data), 'utf8');
-					console.log("goormIDE: your configs are successfully added!");
 				}
 			})
 		
